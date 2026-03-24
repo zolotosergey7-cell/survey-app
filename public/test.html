@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="go()" style="padding:14px 24px;font-size:16px;cursor:pointer">
+  Создать сессию
+</button>
+<div id="r" style="margin-top:20px;font-size:16px;line-height:2"></div>
+<script>
+async function go() {
+  const res = await fetch("/api/session/create", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({companyName:"Тест"})
+  });
+  const d = await res.json();
+  document.getElementById("r").innerHTML =
+    "ID: <b>" + d.sessionId + "</b><br>" +
+    '<a href="/participant/?s=' + d.sessionId + '" target="_blank">👉 Открыть анкету</a>';
+}
+</script>
+</body>
+</html>

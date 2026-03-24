@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Дашборд руководителя</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 16px;
+      padding: 20px 24px;
+      color: #fff;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { font-size: 20px; font-weight: 800; }
+    .header p  { font-size: 13px; opacity: .85; margin-top: 4px; }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .card h2 {
+      font-size: 16px; font-weight: 700;
+      color: #111827; margin-bottom: 16px;
+    }
+
+    label {
+      display: block; font-size: 13px;
+      font-weight: 600; color: #374151; margin-bottom: 5px;
+    }
+    input {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #d1d5db; border-radius: 10px;
+      font-size: 15px; outline: none; margin-bottom: 12px;
+    }
+    input:focus { border-color: #6366f1; }
+
+    .btn {
+      padding: 12px 20px; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary { background: #6366f1; color: #fff; }
+    .btn-green   { background: #22c55e; color: #fff; }
+    .btn-gray    { background: #e5e7eb; color: #374151; }
+    .btn-red     { background: #ef4444; color: #fff; }
+
+    /* Счётчик */
+    .counter-box {
+      background: #eef2ff; border-radius: 12px;
+      padding: 20px; text-align: center;
+    }
+    .counter-num   { font-size: 48px; font-weight: 800; color: #6366f1; }
+    .counter-label { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+    /* QR */
+    .qr-block { text-align: center; }
+    .qr-block img { width: 200px; height: 200px; border-radius: 12px; margin-bottom: 12px; }
+    .qr-url {
+      font-size: 13px; color: #6366f1; word-break: break-all;
+      background: #eef2ff; padding: 8px 12px; border-radius: 8px;
+      margin-bottom: 12px; display: block;
+    }
+    .qr-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    /* Средние баллы по блокам */
+    .block-score {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; border-radius: 12px;
+      margin-bottom: 10px; border: 1px solid #e5e7eb;
+    }
+    .block-badge {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .block-info { flex: 1; }
+    .block-title-sm { font-size: 13px; font-weight: 700; color: #111827; }
+    .block-subtitle { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .block-bar-track {
+      height: 8px; background: #e5e7eb; border-radius: 8px;
+      overflow: hidden; margin-top: 6px;
+    }
+    .block-bar-fill {
+      height: 100%; border-radius: 8px; transition: width .6s ease;
+    }
+    .block-score-num {
+      font-size: 24px; font-weight: 800; flex-shrink: 0;
+    }
+
+    /* Распределение выборов */
+    .choice-item {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .choice-label { font-size: 13px; color: #374151; width: 160px; flex-shrink: 0; }
+    .choice-bar-track {
+      flex: 1; height: 20px; background: #e5e7eb;
+      border-radius: 8px; overflow: hidden;
+    }
+    .choice-bar-fill {
+      height: 100%; border-radius: 8px; transition: width .5s;
+      display: flex; align-items: center; padding-left: 8px;
+      font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .choice-count { font-size: 13px; font-weight: 700; color: #374151; width: 30px; }
+
+    /* Открытые ответы */
+    .text-answer {
+      background: #f9fafb; border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 8px;
+      font-size: 14px; color: #374151; line-height: 1.6;
+      border-left: 3px solid #8b5cf6;
+    }
+
+    .empty-msg { color: #9ca3af; font-size: 14px; text-align: center; padding: 16px 0; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* Индекс коммуникации */
+    .index-box {
+      text-align: center; padding: 20px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 16px; color: #fff; margin-bottom: 16px;
+    }
+    .index-num   { font-size: 64px; font-weight: 800; }
+    .index-label { font-size: 14px; opacity: .85; margin-top: 4px; }
+    .index-sub   { font-size: 12px; opacity: .7; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ─── ЭКРАН 1: Создание сессии ──────────────────────── -->
+<div class="screen active" id="screen-create">
+  <div class="header">
+    <div>
+      <h1>📊 Панель руководителя</h1>
+      <p>Создай сессию и поделись QR-кодом с сотрудниками</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Новый опрос</h2>
+    <label>Название компании / команды</label>
+    <input id="inp-company" type="text" placeholder="Например: Отдел продаж" value="Моя компания" />
+    <label>PIN руководителя <span style="font-weight:400;color:#9ca3af">(необязательно)</span></label>
+    <input id="inp-pin" type="text" placeholder="4 цифры" maxlength="4" />
+    <button class="btn btn-primary" id="btn-create" style="width:100%">
+      Создать опрос →
+    </button>
+  </div>
+</div>
+
+<!-- ─── ЭКРАН 2: Дашборд ───────────────────────────────── -->
+<div class="screen" id="screen-dashboard">
+
+  <div class="header">
+    <div>
+      <h1 id="dash-title">Компания</h1>
+      <p id="dash-session-id">Сессия: —</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-green"  id="btn-export">⬇ Excel</button>
+      <button class="btn btn-primary" id="btn-analyze">🤖 Анализ</button>
+      <button class="btn btn-red"    id="btn-end">Завершить</button>
+    </div>
+  </div>
+
+  <!-- Счётчик ответов -->
+  <div class="card">
+    <div class="counter-box">
+      <div class="counter-num" id="cnt-responses">0</div>
+      <div class="counter-label">ответов получено</div>
+    </div>
+  </div>
+
+  <!-- QR-код -->
+  <div class="card">
+    <h2>QR-код для сотрудников</h2>
+    <div class="qr-block">
+      <img id="qr-img" src="" alt="QR" />
+      <a class="qr-url" id="qr-url" href="#" target="_blank"></a>
+      <div class="qr-btns">
+        <button class="btn btn-gray" id="btn-dl-qr">⬇ Скачать QR</button>
+        <button class="btn btn-gray" id="btn-copy">🔗 Скопировать ссылку</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Индекс коммуникации -->
+  <div id="block-index" style="display:none">
+    <div class="index-box">
+      <div class="index-num" id="index-num">—</div>
+      <div class="index-label">Индекс коммуникации</div>
+      <div class="index-sub">Средняя оценка по вопросу 19 (шкала 1–10)</div>
+    </div>
+  </div>
+
+  <!-- Средние баллы по блокам -->
+  <div class="card" id="card-blocks" style="display:none">
+    <h2>Средние баллы по блокам</h2>
+    <div id="blocks-list"></div>
+  </div>
+
+  <!-- Распределение выборов -->
+  <div class="card" id="card-choices" style="display:none">
+    <h2>Распределение ответов</h2>
+    <div id="choices-list"></div>
+  </div>
+
+  <!-- Открытые ответы -->
+  <div class="card" id="card-text" style="display:none">
+    <h2>💬 Открытые ответы <span style="font-weight:400;color:#9ca3af;font-size:14px">(анонимно)</span></h2>
+    <div id="text-answers-list"></div>
+  </div>
+  <!-- Анализ Claude -->
+  <div class="card" id="card-analysis" style="display:none">
+  <h2>🤖 AI-анализ результатов</h2>
+  <div id="analysis-loading" style="display:none;text-align:center;padding:20px;color:#6b7280">
+    ⏳ Claude анализирует данные... (~15 секунд)
+  </div>
+  <div id="analysis-content" style="font-size:14px;line-height:1.8;color:#374151;white-space:pre-wrap"></div>
+</div>
+</div>
+
+<script>
+// ── Конфиг блоков ─────────────────────────────────────────
+const BLOCK_CONFIG = {
+  A: { label: "Коммуникация внутри департамента",    color: "#6366f1", max: 5 },
+  B: { label: "Коммуникация между департаментами",   color: "#f59e0b", max: 5 },
+  C: { label: "Общая коммуникация в компании",       color: "#22c55e", max: 5 },
+  D: { label: "Психологическая безопасность",        color: "#ef4444", max: 5 },
+};
+
+const CHOICE_QUESTIONS = {
+  11: { text: "Сложности в коммуникации с отделом", color: "#f59e0b" },
+  16: { text: "Наиболее эффективный канал",          color: "#22c55e" }
+};
+
+let sessionId      = null;
+let qrDataUrl      = null;
+let participantUrl = null;
+let currentData    = null;
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// ── Создание сессии ───────────────────────────────────────
+document.getElementById("btn-create").addEventListener("click", async () => {
+  const companyName = document.getElementById("inp-company").value.trim() || "Компания";
+  const pin         = document.getElementById("inp-pin").value.trim();
+  const btn         = document.getElementById("btn-create");
+
+  btn.disabled    = true;
+  btn.textContent = "Создаём...";
+
+  try {
+    const res  = await fetch("/api/session/create", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ companyName, pin })
+    });
+    const data = await res.json();
+
+    sessionId      = data.sessionId;
+    qrDataUrl      = data.qrDataUrl;
+    participantUrl = data.participantUrl;
+
+    initDashboard(companyName);
+    connectSocket();
+    showScreen("screen-dashboard");
+
+  } catch (e) {
+    alert("Ошибка. Проверь что сервер запущен.");
+    btn.disabled    = false;
+    btn.textContent = "Создать опрос →";
+  }
+});
+
+// ── Инициализация дашборда ────────────────────────────────
+function initDashboard(companyName) {
+  document.getElementById("dash-title").textContent      = companyName;
+  document.getElementById("dash-session-id").textContent = "Сессия: " + sessionId;
+  document.getElementById("qr-img").src                  = qrDataUrl;
+  document.getElementById("qr-url").textContent          = participantUrl;
+  document.getElementById("qr-url").href                 = participantUrl;
+
+  document.getElementById("btn-dl-qr").addEventListener("click", () => {
+    const a  = document.createElement("a");
+    a.href   = qrDataUrl;
+    a.download = "qr-" + sessionId + ".png";
+    a.click();
+  });
+
+  document.getElementById("btn-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText(participantUrl).then(() => {
+      const btn = document.getElementById("btn-copy");
+      btn.textContent = "✓ Скопировано!";
+      setTimeout(() => btn.textContent = "🔗 Скопировать ссылку", 2000);
+    });
+  });
+
+  document.getElementById("btn-export").addEventListener("click", () => {
+    window.location.href = `/api/session/${sessionId}/export`;
+  });
+  document.getElementById("btn-analyze").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-analyze");
+  const card = document.getElementById("card-analysis");
+  const loading = document.getElementById("analysis-loading");
+  const content = document.getElementById("analysis-content");
+
+  btn.disabled    = true;
+  btn.textContent = "⏳ Анализирую...";
+  card.style.display   = "block";
+  loading.style.display = "block";
+  content.textContent  = "";
+
+  try {
+    const res  = await fetch(`/api/session/${sessionId}/analyze`, { method: "POST" });
+    const data = await res.json();
+
+    loading.style.display = "none";
+    if (data.error) {
+      content.textContent = "❌ " + data.error;
+    } else {
+      content.textContent = data.analysis;
+    }
+  } catch (e) {
+    loading.style.display = "none";
+    content.textContent = "❌ Ошибка соединения с сервером";
+  }
+
+  btn.disabled    = false;
+  btn.textContent = "🤖 Анализ";
+});
+  document.getElementById("btn-end").addEventListener("click", () => {
+    if (confirm("Завершить опрос? Данные будут удалены.")) {
+      sessionId = null;
+      showScreen("screen-create");
+      document.getElementById("btn-create").disabled    = false;
+      document.getElementById("btn-create").textContent = "Создать опрос →";
+    }
+  });
+}
+
+// ── WebSocket ─────────────────────────────────────────────
+function connectSocket() {
+  const socket = io();
+  socket.on("connect", () => socket.emit("joinSession", { sessionId }));
+  socket.on("newResponse", data => {
+    currentData = data;
+    updateDashboard(data);
+  });
+}
+
+// ── Обновление дашборда ───────────────────────────────────
+function updateDashboard(data) {
+  document.getElementById("cnt-responses").textContent = data.totalCount;
+
+  // Индекс коммуникации (вопрос 19)
+  // Считается отдельно на клиенте из averages блока D
+  if (data.averages && data.averages.D) {
+    document.getElementById("block-index").style.display = "block";
+    // Вопрос 19 — шкала 1-10, показываем среднее блока D отдельно
+  }
+
+  // Средние баллы по блокам
+  if (data.averages && Object.keys(data.averages).length > 0) {
+    document.getElementById("card-blocks").style.display = "block";
+    renderBlockScores(data.averages);
+  }
+
+  // Выборы
+  if (data.choiceDist) {
+    document.getElementById("card-choices").style.display = "block";
+    renderChoices(data.choiceDist);
+  }
+
+  // Открытые ответы
+  if (data.textAnswers && data.textAnswers.length > 0) {
+    document.getElementById("card-text").style.display = "block";
+    renderTextAnswers(data.textAnswers);
+  }
+}
+
+// ── Средние баллы ─────────────────────────────────────────
+function renderBlockScores(averages) {
+  const el = document.getElementById("blocks-list");
+  el.innerHTML = "";
+
+  // Индекс коммуникации отдельно
+  if (averages.D) {
+    document.getElementById("index-num").textContent = averages.D;
+  }
+
+  Object.entries(BLOCK_CONFIG).forEach(([id, cfg]) => {
+    const score = averages[id] || 0;
+    const pct   = Math.round((score / cfg.max) * 100);
+
+    el.innerHTML += `
+      <div class="block-score">
+        <div class="block-badge" style="background:${cfg.color}">${id}</div>
+        <div class="block-info">
+          <div class="block-title-sm">${cfg.label}</div>
+          <div class="block-subtitle">Средний балл</div>
+          <div class="block-bar-track">
+            <div class="block-bar-fill" style="width:${pct}%;background:${cfg.color}"></div>
+          </div>
+        </div>
+        <div class="block-score-num" style="color:${cfg.color}">${score}</div>
+      </div>`;
+  });
+}
+
+// ── Распределение выборов ─────────────────────────────────
+function renderChoices(choiceDist) {
+  const el = document.getElementById("choices-list");
+  el.innerHTML = "";
+
+  Object.entries(CHOICE_QUESTIONS).forEach(([qId, cfg]) => {
+    const dist  = choiceDist[qId] || {};
+    const total = Object.values(dist).reduce((s, v) => s + v, 0);
+    if (total === 0) return;
+
+    el.innerHTML += `<div style="font-weight:700;font-size:14px;margin-bottom:10px;margin-top:16px">${cfg.text}</div>`;
+
+    const sorted = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+    sorted.forEach(([label, count]) => {
+      const pct = Math.round((count / total) * 100);
+      el.innerHTML += `
+        <div class="choice-item">
+          <div class="choice-label">${label}</div>
+          <div class="choice-bar-track">
+            <div class="choice-bar-fill" style="width:${pct}%;background:${cfg.color}">
+              ${pct > 15 ? pct + "%" : ""}
+            </div>
+          </div>
+          <div class="choice-count">${count}</div>
+        </div>`;
+    });
+  });
+}
+
+// ── Открытые ответы ───────────────────────────────────────
+function renderTextAnswers(answers) {
+  const el = document.getElementById("text-answers-list");
+  if (answers.length === 0) {
+    el.innerHTML = '<div class="empty-msg">Пока нет открытых ответов</div>';
+    return;
+  }
+  el.innerHTML = answers.map(a =>
+    `<div class="text-answer">${a}</div>`
+  ).join("");
+}
+</script>
+</body>
+</html>

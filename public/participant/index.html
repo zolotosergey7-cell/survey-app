@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Анкета коммуникации</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      padding: 20px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .header {
+      width: 100%;
+      max-width: 520px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 16px;
+      padding: 20px 24px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    .header h1 { font-size: 20px; font-weight: 800; }
+    .header p  { font-size: 13px; opacity: .85; margin-top: 4px; }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      margin-bottom: 14px;
+    }
+
+    .block-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      padding: 10px 14px;
+      border-radius: 10px;
+    }
+
+    /* Прогресс */
+    .progress-wrap { width: 100%; max-width: 520px; margin-bottom: 16px; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: #6b7280; margin-bottom: 6px;
+    }
+    .progress-track { height: 8px; background: #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .progress-fill  {
+      height: 100%; background: #6366f1; border-radius: 8px;
+      transition: width .4s ease;
+    }
+
+    /* Вопрос */
+    .question-wrap { margin-bottom: 24px; }
+    .question-text {
+      font-size: 15px; font-weight: 600; color: #111827;
+      line-height: 1.55; margin-bottom: 14px;
+    }
+    .question-num {
+      font-size: 12px; color: #9ca3af; margin-bottom: 6px; font-weight: 600;
+    }
+
+    /* Шкала 1-5 */
+    .scale5-grid {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .scale5-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 10px;
+      border: 1.5px solid #e5e7eb; background: #f9fafb;
+      cursor: pointer; font-size: 14px; color: #374151;
+      transition: all .15s; text-align: left;
+    }
+    .scale5-btn.selected {
+      border-color: #6366f1; background: #eef2ff;
+      color: #3730a3; font-weight: 700;
+    }
+    .scale5-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #e5e7eb; display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: 13px;
+      flex-shrink: 0;
+    }
+    .scale5-btn.selected .scale5-num { background: #6366f1; color: #fff; }
+
+    /* Шкала 1-10 */
+    .scale10-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    }
+    .scale10-btn {
+      padding: 14px 4px; border-radius: 10px;
+      border: 1.5px solid #e5e7eb; background: #f9fafb;
+      cursor: pointer; font-size: 16px; font-weight: 700;
+      color: #374151; text-align: center; transition: all .15s;
+    }
+    .scale10-btn.selected {
+      border-color: #6366f1; background: #6366f1; color: #fff;
+    }
+    .scale10-labels {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: #9ca3af; margin-top: 6px;
+    }
+
+    /* Выбор */
+    .choice-grid { display: flex; flex-direction: column; gap: 8px; }
+    .choice-btn {
+      padding: 12px 16px; border-radius: 10px;
+      border: 1.5px solid #e5e7eb; background: #f9fafb;
+      cursor: pointer; font-size: 14px; color: #374151;
+      text-align: left; transition: all .15s; font-weight: 500;
+    }
+    .choice-btn.selected {
+      border-color: #6366f1; background: #eef2ff;
+      color: #3730a3; font-weight: 700;
+    }
+
+    /* Текстовый вопрос */
+    textarea {
+      width: 100%; padding: 14px; border: 1.5px solid #d1d5db;
+      border-radius: 10px; font-size: 15px; font-family: inherit;
+      resize: vertical; min-height: 120px; outline: none;
+      transition: border-color .2s; line-height: 1.5;
+    }
+    textarea:focus { border-color: #6366f1; }
+    .text-hint { font-size: 13px; color: #9ca3af; margin-top: 6px; }
+
+    /* Кнопка отправки */
+    .btn-submit {
+      width: 100%; max-width: 520px;
+      padding: 16px; border: none; border-radius: 12px;
+      background: #6366f1; color: #fff;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: opacity .15s; margin-top: 4px;
+    }
+    .btn-submit:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Экран спасибо */
+    .thanks-screen {
+      text-align: center; padding: 40px 20px;
+    }
+    .thanks-icon  { font-size: 64px; margin-bottom: 16px; }
+    .thanks-title { font-size: 24px; font-weight: 800; color: #111827; margin-bottom: 10px; }
+    .thanks-text  { font-size: 15px; color: #6b7280; line-height: 1.6; }
+
+    .error-msg {
+      background: #fef2f2; color: #dc2626; border-radius: 10px;
+      padding: 12px 14px; font-size: 14px; margin-bottom: 14px;
+      display: none; width: 100%; max-width: 520px;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <!-- ─── ЭКРАН 1: Опрос ─────────────────────────────────── -->
+  <div class="screen active" id="screen-survey">
+
+    <div class="header">
+      <h1>📋 Анкета коммуникации</h1>
+      <p>Анонимно · 7–10 минут · Шкала 1–5</p>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progress-text">Загрузка...</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div id="error-msg" class="error-msg"></div>
+    <div id="survey-body"></div>
+
+    <button class="btn-submit" id="btn-submit" disabled>
+      Отправить анкету ✓
+    </button>
+
+  </div>
+
+  <!-- ─── ЭКРАН 2: Спасибо ───────────────────────────────── -->
+  <div class="screen" id="screen-thanks">
+    <div class="card thanks-screen">
+      <div class="thanks-icon">🙏</div>
+      <div class="thanks-title">Спасибо за участие!</div>
+      <div class="thanks-text">
+        Твои ответы анонимны и помогут улучшить<br>
+        коммуникацию в компании.<br><br>
+        Результаты будут представлены руководством.
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── Считываем sessionId из URL ────────────────────────────
+const params    = new URLSearchParams(window.location.search);
+const sessionId = params.get("s");
+
+if (!sessionId) {
+  document.body.innerHTML = `
+    <div class="card" style="margin-top:40px;text-align:center;max-width:520px">
+      <p style="font-size:40px">🚫</p>
+      <h2 style="margin-bottom:8px">Неверная ссылка</h2>
+      <p>Отсканируй QR-код ещё раз или обратись к организатору.</p>
+    </div>`;
+}
+
+// ── Состояние ─────────────────────────────────────────────
+let blocks      = [];
+let scale5Labels = [];
+let answers     = {};   // { questionId: значение }
+let totalScaleQs = 0;   // кол-во обязательных вопросов
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function showError(msg) {
+  const el = document.getElementById("error-msg");
+  el.textContent = msg;
+  el.style.display = "block";
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// ── Загрузка данных ───────────────────────────────────────
+async function loadSurvey() {
+  const res  = await fetch("/api/survey-data");
+  const data = await res.json();
+  blocks       = data.blocks;
+  scale5Labels = data.scale5Labels;
+
+  // Считаем обязательные вопросы (всё кроме text)
+  totalScaleQs = blocks.flatMap(b => b.questions)
+    .filter(q => q.type !== "text").length;
+
+  renderSurvey();
+}
+
+// ── Рендер всех блоков ────────────────────────────────────
+function renderSurvey() {
+  const body = document.getElementById("survey-body");
+  body.innerHTML = "";
+
+  blocks.forEach(block => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const title = document.createElement("div");
+    title.className = "block-title";
+    title.textContent = `Блок ${block.id}. ${block.title}`;
+    title.style.background = block.light;
+    title.style.color = block.color;
+    card.appendChild(title);
+
+    block.questions.forEach(q => {
+      const wrap = document.createElement("div");
+      wrap.className = "question-wrap";
+
+      const num = document.createElement("div");
+      num.className = "question-num";
+      num.textContent = `Вопрос ${q.id}`;
+      wrap.appendChild(num);
+
+      const text = document.createElement("div");
+      text.className = "question-text";
+      text.textContent = q.text;
+      wrap.appendChild(text);
+
+      if (q.type === "scale5")  wrap.appendChild(renderScale5(q, block.color));
+      if (q.type === "scale10") wrap.appendChild(renderScale10(q));
+      if (q.type === "choice")  wrap.appendChild(renderChoice(q, block.color));
+      if (q.type === "text")    wrap.appendChild(renderText(q));
+
+      card.appendChild(wrap);
+    });
+
+    body.appendChild(card);
+  });
+
+  updateProgress();
+}
+
+// ── Шкала 1–5 ─────────────────────────────────────────────
+function renderScale5(q, color) {
+  const grid = document.createElement("div");
+  grid.className = "scale5-grid";
+
+  scale5Labels.forEach((label, i) => {
+    const val = i + 1;
+    const btn = document.createElement("button");
+    btn.className = "scale5-btn" + (answers[q.id] === val ? " selected" : "");
+    btn.innerHTML = `<span class="scale5-num">${val}</span><span>${label}</span>`;
+    btn.addEventListener("click", () => {
+      answers[q.id] = val;
+      // Перекрашиваем кнопки в блоке
+      grid.querySelectorAll(".scale5-btn").forEach((b, j) => {
+        b.classList.toggle("selected", j === i);
+        b.querySelector(".scale5-num").style.background = j === i ? color : "";
+        b.querySelector(".scale5-num").style.color = j === i ? "#fff" : "";
+        b.style.borderColor = j === i ? color : "";
+        b.style.background  = j === i ? color + "15" : "";
+        b.style.color       = j === i ? color : "";
+        b.style.fontWeight  = j === i ? "700" : "";
+      });
+      updateProgress();
+    });
+    grid.appendChild(btn);
+  });
+  return grid;
+}
+
+// ── Шкала 1–10 ────────────────────────────────────────────
+function renderScale10(q) {
+  const wrap = document.createElement("div");
+
+  const grid = document.createElement("div");
+  grid.className = "scale10-grid";
+
+  for (let val = 1; val <= 10; val++) {
+    const btn = document.createElement("button");
+    btn.className = "scale10-btn" + (answers[q.id] === val ? " selected" : "");
+    btn.textContent = val;
+    btn.addEventListener("click", () => {
+      answers[q.id] = val;
+      grid.querySelectorAll(".scale10-btn").forEach((b, j) => {
+        b.classList.toggle("selected", j + 1 === val);
+      });
+      updateProgress();
+    });
+    grid.appendChild(btn);
+  }
+
+  const labels = document.createElement("div");
+  labels.className = "scale10-labels";
+  labels.innerHTML = "<span>Очень низко</span><span>Очень высоко</span>";
+
+  wrap.appendChild(grid);
+  wrap.appendChild(labels);
+  return wrap;
+}
+
+// ── Выбор из списка ───────────────────────────────────────
+function renderChoice(q, color) {
+  const grid = document.createElement("div");
+  grid.className = "choice-grid";
+
+  q.options.forEach(option => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn" + (answers[q.id] === option ? " selected" : "");
+    btn.textContent = option;
+    btn.addEventListener("click", () => {
+      answers[q.id] = option;
+      grid.querySelectorAll(".choice-btn").forEach(b => {
+        const sel = b.textContent === option;
+        b.classList.toggle("selected", sel);
+        b.style.borderColor = sel ? color : "";
+        b.style.background  = sel ? color + "15" : "";
+        b.style.color       = sel ? color : "";
+      });
+      updateProgress();
+    });
+    grid.appendChild(btn);
+  });
+  return grid;
+}
+
+// ── Текстовый вопрос ──────────────────────────────────────
+function renderText(q) {
+  const wrap = document.createElement("div");
+  const ta   = document.createElement("textarea");
+  ta.placeholder = "Напишите ваш ответ здесь...";
+  ta.value = answers[q.id] || "";
+  ta.addEventListener("input", () => {
+    answers[q.id] = ta.value;
+  });
+  const hint = document.createElement("div");
+  hint.className = "text-hint";
+  hint.textContent = "Необязательный вопрос · Ответы анонимны";
+  wrap.appendChild(ta);
+  wrap.appendChild(hint);
+  return wrap;
+}
+
+// ── Прогресс ──────────────────────────────────────────────
+function updateProgress() {
+  const answered = blocks.flatMap(b => b.questions)
+    .filter(q => q.type !== "text" && answers[q.id] !== undefined).length;
+
+  const pct = Math.round((answered / totalScaleQs) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-pct").textContent  = pct + "%";
+  document.getElementById("progress-text").textContent =
+    `Отвечено ${answered} из ${totalScaleQs}`;
+
+  document.getElementById("btn-submit").disabled = answered < totalScaleQs;
+}
+
+// ── Отправка ──────────────────────────────────────────────
+document.getElementById("btn-submit").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-submit");
+  btn.disabled    = true;
+  btn.textContent = "Отправляем...";
+
+  try {
+    const res = await fetch(`/api/session/${sessionId}/submit`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ answers })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showError(data.error || "Ошибка при отправке. Попробуй ещё раз.");
+      btn.disabled    = false;
+      btn.textContent = "Отправить анкету ✓";
+      return;
+    }
+
+    showScreen("screen-thanks");
+
+  } catch (e) {
+    showError("Нет связи с сервером. Проверь интернет и попробуй ещё раз.");
+    btn.disabled    = false;
+    btn.textContent = "Отправить анкету ✓";
+  }
+});
+
+// ── Старт ─────────────────────────────────────────────────
+loadSurvey();
+</script>
+</body>
+</html>
